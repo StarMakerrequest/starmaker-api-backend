@@ -1,0 +1,72 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "StarMaker API Proxy",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "Backend is running"
+          }
+        }
+      }
+    },
+    "/api/fetch-by-sid": {
+      "post": {
+        "summary": "Authorized SID request",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "sid",
+                  "request_type"
+                ],
+                "properties": {
+                  "sid": {
+                    "type": "string"
+                  },
+                  "user_email": {
+                    "type": "string"
+                  },
+                  "request_type": {
+                    "type": "string",
+                    "enum": [
+                      "verification",
+                      "verification_orange",
+                      "login_method",
+                      "backend_access",
+                      "vip_level_wealth"
+                    ]
+                  },
+                  "vip_level": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 16
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upstream response"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "502": {
+            "description": "Upstream failure"
+          }
+        }
+      }
+    }
+  }
+}
