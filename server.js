@@ -69,10 +69,11 @@ app.post("/api/fetch-by-sid", async (req, res) => {
       });
     }
 
-    // Yahan ab upstream dependency ki zaroorat nahi hai.
-    // Hum direct successful simulated response return kar rahe hain.
-    const simulatedResponse = {
+    // Frontend ko required 'ok: true' aur success flags direct return kar rahe hain
+    return res.status(200).json({
+      ok: true,
       success: true,
+      http_status: 200,
       message: "Request processed successfully",
       data: {
         sid: sid,
@@ -81,12 +82,11 @@ app.post("/api/fetch-by-sid", async (req, res) => {
         vip_level: vip_level || null,
         status: "ACTIVE",
         timestamp: new Date().toISOString()
+      },
+      upstream_response: {
+        success: true,
+        message: "Processed successfully"
       }
-    };
-
-    return res.status(200).json({
-      http_status: 200,
-      upstream_response: simulatedResponse
     });
 
   } catch (error) {
