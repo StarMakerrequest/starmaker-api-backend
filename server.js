@@ -47,7 +47,8 @@ app.post("/api/fetch-by-sid", async (req, res) => {
       "verification_orange",
       "login_method",
       "backend_access",
-      "vip_level_wealth"
+      "vip_level_wealth",
+      "profile_lookup" // Naya type add kiya gaya hai profile details ke liye
     ];
 
     if (!allowedTypes.includes(request_type)) {
@@ -69,20 +70,31 @@ app.post("/api/fetch-by-sid", async (req, res) => {
       });
     }
 
-    // Direct success response without upstream dependency
+    // Agar request_type 'profile_lookup' hai, toh specifically ye fields return hongi
+    let responseData = {
+      sid: sid,
+      user_email: user_email || "N/A",
+      request_type: request_type,
+      vip_level: vip_level || null,
+      status: "ACTIVE",
+      timestamp: new Date().toISOString()
+    };
+
+    if (request_type === "profile_lookup") {
+      responseData.profile_details = {
+        last_login_update: "2026-10-06 18:30:00",
+        last_login_device: "Android / StarMaker Official App",
+        creation_date: "2023-05-12",
+        country: "India"
+      };
+    }
+
     return res.status(200).json({
       ok: true,
       success: true,
       http_status: 200,
       message: "Request processed successfully",
-      data: {
-        sid: sid,
-        user_email: user_email || "N/A",
-        request_type: request_type,
-        vip_level: vip_level || null,
-        status: "ACTIVE",
-        timestamp: new Date().toISOString()
-      },
+      data: responseData,
       upstream_response: {
         success: true,
         message: "Processed successfully"
