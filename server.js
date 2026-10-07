@@ -69,7 +69,7 @@ app.post("/api/fetch-by-sid", async (req, res) => {
       });
     }
 
-    // Frontend ko required 'ok: true' aur success flags direct return kar rahe hain
+    // Direct success response without upstream dependency
     return res.status(200).json({
       ok: true,
       success: true,
