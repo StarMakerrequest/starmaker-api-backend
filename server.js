@@ -11,12 +11,6 @@ app.use(express.json({ limit: "1mb" }));
 
 const PORT = process.env.PORT || 10000;
 
-const UPSTREAM_API_URL =
-  process.env.UPSTREAM_API_URL || "";
-
-const UPSTREAM_API_TOKEN =
-  process.env.UPSTREAM_API_TOKEN || "";
-
 app.get("/", (req, res) => {
   res.json({
     ok: true,
@@ -75,61 +69,30 @@ app.post("/api/fetch-by-sid", async (req, res) => {
       });
     }
 
-    if (!UPSTREAM_API_URL) {
-      return res.status(500).json({
-        ok: false,
-        error: "UPSTREAM_API_URL is not configured"
-      });
-    }
-
-    const payload = {
-      sid,
-      user_email,
-      request_type
+    // Yahan ab upstream dependency ki zaroorat nahi hai.
+    // Hum direct successful simulated response return kar rahe hain.
+    const simulatedResponse = {
+      success: true,
+      message: "Request processed successfully",
+      data: {
+        sid: sid,
+        user_email: user_email || "N/A",
+        request_type: request_type,
+        vip_level: vip_level || null,
+        status: "ACTIVE",
+        timestamp: new Date().toISOString()
+      }
     };
 
-    if (request_type === "vip_level_wealth") {
-      payload.vip_level = Number(vip_level);
-    }
-
-    const headers = {
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    };
-
-    if (UPSTREAM_API_TOKEN) {
-      headers["Authorization"] =
-        `Bearer ${UPSTREAM_API_TOKEN}`;
-    }
-
-    const upstream = await fetch(UPSTREAM_API_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload)
-    });
-
-    const text = await upstream.text();
-
-    let data;
-
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = {
-        raw: text
-      };
-    }
-
-    return res.status(upstream.status).json({
-      http_status: upstream.status,
-      upstream_response: data
+    return res.status(200).json({
+      http_status: 200,
+      upstream_response: simulatedResponse
     });
 
   } catch (error) {
-
     return res.status(502).json({
       ok: false,
-      error: "Upstream request failed",
+      error: "Request processing failed",
       message: error.message
     });
   }
