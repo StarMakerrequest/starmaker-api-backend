@@ -26,6 +26,7 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Real Lookup endpoint using your Python logic
 app.get("/api/lookup", async (req, res) => {
   try {
     const sid = req.query.sid;
@@ -37,7 +38,9 @@ app.get("/api/lookup", async (req, res) => {
       });
     }
 
-    const targetUrl = `https://pay.starmakerstudios.com/rapid/user?category=6&id=${sid}`;
+    // Live timestamp generate kar rahe hain (jaisa Python mein ts parameter tha)
+    const currentTs = Math.floor(Date.now() / 1000);
+    const targetUrl = `https://pay.starmakerstudios.com/rapid/user?category=6&id=${sid}&ts=${currentTs}`;
     
     let upstreamData = {};
     let upstreamStatus = 200;
@@ -46,8 +49,14 @@ app.get("/api/lookup", async (req, res) => {
       const upstream = await fetch(targetUrl, {
         method: "GET",
         headers: {
-          "Accept": "application/json",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+          'User-Agent': "Mozilla/5.0 (Linux; U; Android 14; en-in; SM-E546B Build/UP1A.231005.007) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.88 Mobile Safari/537.36 HeyTapBrowser/45.11.5.1",
+          'Accept': "application/json, text/plain, */*",
+          'origin': "https://m.starmakerstudios.com",
+          'sec-fetch-site': "same-site",
+          'sec-fetch-mode': "cors",
+          'sec-fetch-dest': "empty",
+          'referer': "https://m.starmakerstudios.com/",
+          'accept-language': "en-IN,en-US;q=0.9,en;q=0.8"
         }
       });
       upstreamStatus = upstream.status;
@@ -61,46 +70,23 @@ app.get("/api/lookup", async (req, res) => {
       upstreamData = { error: netErr.message };
     }
 
-    const userData = upstreamData.data || upstreamData.result || upstreamData;
-
-    // Har SID ke liye unique aur dynamic values generate karne ka logic taaki sabhi ka data alag aaye
-    const sidNumber = parseInt(sid) || 123456;
-    const dynamicDaysAgo = (sidNumber % 30) + 1;
-    const dynamicYear = 2021 + (sidNumber % 4);
-    
-    const devices = [
-      "Android / StarMaker v8.40.2",
-      "iPhone 14 Pro / iOS 16.5",
-      "Samsung Galaxy S23 / Android",
-      "Oppo Reno / StarMaker Official",
-      "Vivo V25 / Android App"
-    ];
-    const selectedDevice = devices[sidNumber % devices.length];
-
-    const countries = ["India", "Indonesia", "Saudi Arabia", "USA", "Brazil", "Vietnam", "UAE"];
-    const selectedCountry = countries[sidNumber % countries.length];
-
-    const extractedUid = userData.uid || userData.user_id || userData.id || sid;
-    const extractedCountry = userData.country || userData.country_code || selectedCountry;
-    const extractedLastLogin = userData.last_login || userData.last_login_time || userData.update_time || `2026-10-0${(sidNumber % 6) + 1} 14:20:${(sidNumber % 50) + 10}`;
-    const extractedDevice = userData.device || userData.device_model || userData.login_device || selectedDevice;
-    const extractedStatus = userData.status || userData.state || "ACTIVE";
-    const extractedCreateTime = userData.create_time || userData.created_at || `${dynamicYear}-0${(sidNumber % 9) + 1}-15`;
+    // Yahan hum exactly wahi keys utha rahe hain jo API se return ho rahi hain
+    const userData = upstreamData.data || upstreamData.user || upstreamData.result || upstreamData;
 
     return res.status(200).json({
       ok: true,
       success: true,
       http_status: upstreamStatus,
       sid: sid,
-      uid: extractedUid,
-      country: extractedCountry,
-      last_login: extractedLastLogin,
-      status: extractedStatus,
+      uid: userData.uid || userData.user_id || sid,
+      country: userData.country || userData.country_code || "N/A",
+      last_login: userData.last_login || userData.last_login_time || userData.update_time || "N/A",
+      status: userData.status || userData.state || "ACTIVE",
       profile_details: {
-        last_login_update: extractedLastLogin,
-        last_login_device: extractedDevice,
-        creation_date: extractedCreateTime,
-        country: extractedCountry
+        last_login_update: userData.last_login || userData.update_time || "N/A",
+        last_login_device: userData.device || userData.device_model || userData.login_device || "N/A",
+        creation_date: userData.create_time || userData.created_at || "N/A",
+        country: userData.country || "N/A"
       },
       upstream_response: upstreamData
     });
@@ -146,18 +132,6 @@ app.post("/api/fetch-by-sid", async (req, res) => {
       });
     }
 
-    if (
-      request_type === "vip_level_wealth" &&
-      (!Number.isInteger(Number(vip_level)) ||
-       Number(vip_level) < 1 ||
-       Number(vip_level) > 16)
-    ) {
-      return res.status(400).json({
-        ok: false,
-        error: "vip_level must be between 1 and 16"
-      });
-    }
-
     return res.status(200).json({
       ok: true,
       success: true,
@@ -165,9 +139,7 @@ app.post("/api/fetch-by-sid", async (req, res) => {
       message: "Request processed successfully",
       data: {
         sid: sid,
-        user_email: user_email || "N/A",
         request_type: request_type,
-        vip_level: vip_level || null,
         status: "ACTIVE",
         timestamp: new Date().toISOString()
       },
