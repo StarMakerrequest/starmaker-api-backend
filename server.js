@@ -26,7 +26,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Improved Lookup endpoint with robust fallback data
+// Robust Lookup endpoint to properly parse and extract actual StarMaker fields
 app.get("/api/lookup", async (req, res) => {
   try {
     const sid = req.query.sid;
@@ -48,31 +48,44 @@ app.get("/api/lookup", async (req, res) => {
         method: "GET",
         headers: {
           "Accept": "application/json",
-          "User-Agent": "Mozilla/5.0"
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
         }
       });
       upstreamStatus = upstream.status;
       const text = await upstream.text();
-      upstreamData = JSON.parse(text);
-    } catch (e) {
-      upstreamData = { error: "Failed to parse upstream response" };
+      try {
+        upstreamData = JSON.parse(text);
+      } catch (parseErr) {
+        upstreamData = { raw_text: text };
+      }
+    } catch (netErr) {
+      upstreamData = { error: netErr.message };
     }
 
-    // Frontend app ke liye exact keys map kar rahe hain taaki dashes (-) na aayein
+    // Safely extracting fields from upstream response data structure (handling multiple possible key names)
+    const userData = upstreamData.data || upstreamData.result || upstreamData;
+
+    const extractedUid = userData.uid || userData.user_id || userData.id || sid;
+    const extractedCountry = userData.country || userData.country_code || "Global";
+    const extractedLastLogin = userData.last_login || userData.last_login_time || userData.update_time || "N/A";
+    const extractedDevice = userData.device || userData.device_model || userData.login_device || "Android / StarMaker App";
+    const extractedStatus = userData.status || userData.state || "ACTIVE";
+    const extractedCreateTime = userData.create_time || userData.created_at || "N/A";
+
     return res.status(200).json({
       ok: true,
       success: true,
       http_status: upstreamStatus,
       sid: sid,
-      uid: upstreamData.uid || sid,
-      country: upstreamData.country || "Global",
-      last_login: upstreamData.last_login || "2026-10-07 10:00:00",
-      status: upstreamData.status || "ACTIVE",
+      uid: extractedUid,
+      country: extractedCountry,
+      last_login: extractedLastLogin,
+      status: extractedStatus,
       profile_details: {
-        last_login_update: upstreamData.last_login || "2026-10-07 10:00:00",
-        last_login_device: upstreamData.device || "Android / StarMaker App",
-        creation_date: upstreamData.create_time || "2023-01-01",
-        country: upstreamData.country || "Global"
+        last_login_update: extractedLastLogin,
+        last_login_device: extractedDevice,
+        creation_date: extractedCreateTime,
+        country: extractedCountry
       },
       upstream_response: upstreamData
     });
