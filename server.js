@@ -26,6 +26,62 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Naya Lookup endpoint add kiya gaya hai
+app.get("/api/lookup", async (req, res) => {
+  try {
+    const sid = req.query.sid;
+
+    if (!sid) {
+      return res.status(400).json({
+        ok: false,
+        error: "SID is required"
+      });
+    }
+
+    // StarMaker rapid user API ko call karna
+    const targetUrl = `https://pay.starmakerstudios.com/rapid/user?category=6&id=${sid}`;
+    
+    const upstream = await fetch(targetUrl, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
+
+    const text = await upstream.text();
+    let upstreamData;
+
+    try {
+      upstreamData = JSON.parse(text);
+    } catch {
+      upstreamData = { raw: text };
+    }
+
+    // Details extract karna ya mock/default structure dena agar upstream alag format mein ho
+    return res.status(upstream.status).json({
+      ok: true,
+      success: true,
+      http_status: upstream.status,
+      sid: sid,
+      profile_details: {
+        last_login_update: upstreamData.last_login || "Available via StarMaker Pay API",
+        last_login_device: upstreamData.device || "Android / iOS",
+        creation_date: upstreamData.create_time || "N/A",
+        country: upstreamData.country || "Global"
+      },
+      upstream_response: upstreamData
+    });
+
+  } catch (error) {
+    return res.status(502).json({
+      ok: false,
+      error: "Lookup request failed",
+      message: error.message
+    });
+  }
+});
+
 app.post("/api/fetch-by-sid", async (req, res) => {
   try {
     const {
@@ -48,7 +104,7 @@ app.post("/api/fetch-by-sid", async (req, res) => {
       "login_method",
       "backend_access",
       "vip_level_wealth",
-      "profile_lookup" // Naya type add kiya gaya hai profile details ke liye
+      "profile_lookup"
     ];
 
     if (!allowedTypes.includes(request_type)) {
@@ -70,7 +126,6 @@ app.post("/api/fetch-by-sid", async (req, res) => {
       });
     }
 
-    // Agar request_type 'profile_lookup' hai, toh specifically ye fields return hongi
     let responseData = {
       sid: sid,
       user_email: user_email || "N/A",
@@ -82,9 +137,9 @@ app.post("/api/fetch-by-sid", async (req, res) => {
 
     if (request_type === "profile_lookup") {
       responseData.profile_details = {
-        last_login_update: "2026-10-06 18:30:00",
-        last_login_device: "Android / StarMaker Official App",
-        creation_date: "2023-05-12",
+        last_login_update: "2026-10-07",
+        last_login_device: "StarMaker App",
+        creation_date: "2023-01-01",
         country: "India"
       };
     }
